@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件传输助手 - 云端模式</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'fade-in': 'fadeIn 0.5s ease-out'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .glass-dark {
+                background: rgba(15, 23, 42, 0.8);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .gradient-text {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+            }
+            .card-hover {
+                @apply transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg;
+            }
+            .btn-primary {
+                @apply bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/50;
+            }
+            .btn-secondary {
+                @apply bg-white/10 backdrop-blur-sm text-white border border-white/20 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30;
+            }
+            .input-primary {
+                @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-300;
+            }
+            .card {
+                @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl overflow-hidden;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 6px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 3px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.5);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark-950 via-dark-900 to-dark-800 min-h-screen text-white font-sans">
+    <!-- 背景装饰 -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
+        <div class="absolute bottom-20 right-10 w-80 h-80 bg-secondary/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
+    </div>
+
+    <div class="relative z-10">
+        <!-- 导航栏 -->
+        <nav class="glass-dark sticky top-0 z-50 border-b border-white/10">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                            <i class="fa fa-cloud text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold">文件传输助手</h1>
+                            <p class="text-xs text-gray-400">云端模式</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                            <i class="fa fa-moon-o text-xl"></i>
+                        </button>
+                        <button id="back-to-bluetooth" class="btn-secondary text-sm px-4 py-2">
+                            <i class="fa fa-bluetooth mr-2"></i>蓝牙模式
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主要内容 -->
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 欢迎区域 -->
+            <section class="mb-12 text-center animate-slide-up">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    <span class="gradient-text">安全高效</span>的文件传输
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
+                    无需复杂设置，简单几步即可安全传输文件。支持多种文件格式，快速生成提取码，随时随地轻松分享。
+                </p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <div class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                        <i class="fa fa-shield text-green-400"></i>
+                        <span class="text-sm">端到端加密</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                        <i class="fa fa-clock-o text-blue-400"></i>
+                        <span class="text-sm">10分钟有效期</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                        <i class="fa fa-key text-purple-400"></i>
+                        <span class="text-sm">5位提取码</span>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                        <i class="fa fa-cloud-upload text-orange-400"></i>
+                        <span class="text-sm">无限文件大小</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 功能区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <!-- 发送文件 -->
+                <section class="card card-hover animate-fade-in">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-semibold">发送文件</h3>
+                            <span class="text-xs font-medium px-3 py-1 rounded-full bg-green-500/20 text-green-400">
+                                <i class="fa fa-check-circle mr-1"></i>就绪
+                            </span>
+                        </div>
+                        
+                        <!-- 拖拽上传区域 -->
+                        <div id="upload-area" class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-primary hover:bg-white/5 transition-all duration-300 cursor-pointer group mb-6">
+                            <input type="file" id="file-input" class="hidden" multiple>
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <i class="fa fa-cloud-upload text-4xl gradient-text"></i>
+                                </div>
+                                <h4 class="text-lg font-medium mb-2">点击或拖拽文件到此处</h4>
+                                <p class="text-gray-400 text-sm mb-4">支持图片、文档、音频、视频等多种格式</p>
+                                <button id="browse-files-btn" class="btn-primary text-sm">
+                                    <i class="fa fa-folder-open mr-2"></i>选择文件
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 已选择文件列表 -->
+                        <div id="selected-files" class="hidden">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-medium text-gray-300">已选择的文件</h4>
+                                <button id="clear-files-btn" class="text-sm text-gray-400 hover:text-danger flex items-center">
+                                    <i class="fa fa-trash-o mr-1"></i>清空
+                                </button>
+                            </div>
+                            <div id="file-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-thin mb-6"></div>
+                            
+                            <button id="send-file-btn" class="w-full btn-primary">
+                                <i class="fa fa-paper-plane mr-2"></i>开始上传
+                            </button>
+                        </div>
+                        
+                        <!-- 上传进度 -->
+                        <div id="upload-progress" class="hidden">
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium" id="upload-status">正在上传...</span>
+                                    <span class="text-sm text-gray-400" id="upload-percentage">0%</span>
+                                </div>
+                                <div class="w-full bg-white/10 rounded-full h-2 mb-2">
+                                    <div id="progress-bar" class="bg-gradient-to-r from-primary to-secondary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-500">
+                                    <span id="uploaded-size">0 B / 0 B</span>
+                                    <span id="upload-speed">0 B/s</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button id="pause-upload-btn" class="flex-1 btn-secondary text-sm">
+                                    <i class="fa fa-pause mr-2"></i>暂停
+                                </button>
+                                <button id="cancel-upload-btn" class="flex-1 bg-danger/20 hover:bg-danger/30 text-danger border border-danger/30 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-danger/50">
+                                    <i class="fa fa-times mr-2"></i>取消
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 接收文件 -->
+                <section class="card card-hover animate-fade-in" style="animation-delay: 0.2s">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-semibold">接收文件</h3>
+                            <span class="text-xs font-medium px-3 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                                <i class="fa fa-download mr-1"></i>提取
+                            </span>
+                        </div>
+                        
+                        <!-- 提取码输入 -->
+                        <div id="receive-section">
+                            <div class="mb-6">
+                                <label for="input-extraction-code" class="block text-sm font-medium text-gray-300 mb-3">输入提取码</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                        <i class="fa fa-key text-gray-500"></i>
+                                    </div>
+                                    <input type="text" id="input-extraction-code" class="input-primary w-full pl-12 pr-4 py-6 text-center text-2xl font-mono tracking-widest" placeholder="00000" maxlength="5" pattern="\d{5}">
+                                </div>
+                                <p class="text-gray-500 text-xs mt-2 text-center">请输入5位数字提取码获取文件</p>
+                            </div>
+                            
+                            <button id="receive-file-btn" class="w-full btn-primary">
+                                <i class="fa fa-search mr-2"></i>提取文件
+                            </button>
+                        </div>
+                        
+                        <!-- 文件预览 -->
+                        <div id="file-preview" class="hidden">
+                            <div class="mb-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-medium">文件信息</h4>
+                                    <span class="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">
+                                        <i class="fa fa-check mr-1"></i>有效
+                                    </span>
+                                </div>
+                                <div id="preview-file-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-thin mb-6"></div>
+                                <div class="flex items-center justify-between text-sm text-gray-400 mb-4">
+                                    <span><i class="fa fa-clock-o mr-1"></i>有效期剩余: <span id="expire-time">10:00</span></span>
+                                    <span><i class="fa fa-user mr-1"></i>由: <span id="sender-info">未知用户</span></span>
+                                </div>
+                                <button id="download-all-btn" class="w-full btn-primary">
+                                    <i class="fa fa-download mr-2"></i>下载所有文件
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 提取失败 -->
+                        <div id="extract-error" class="hidden text-center py-8">
+                            <div class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                                <i class="fa fa-times-circle text-2xl text-red-400"></i>
+                            </div>
+                            <h4 class="font-semibold mb-2">提取失败</h4>
+                            <p class="text-gray-400 text-sm mb-4">提取码无效或已过期</p>
+                            <button id="try-again-btn" class="btn-secondary text-sm">
+                                <i class="fa fa-refresh mr-2"></i>重试
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 提取码生成区域 -->
+            <section id="extraction-code-section" class="card card-hover hidden animate-fade-in mb-12">
+                <div class="bg-gradient-to-r from-green-500/20 to-emerald-500/20 p-4 border-b border-green-500/30">
+                    <div class="flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-full bg-green-500/30 flex items-center justify-center mr-3">
+                            <i class="fa fa-check text-green-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-green-400">文件已上传成功！</h3>
+                    </div>
+                </div>
+                <div class="p-8 text-center">
+                    <div class="inline-block bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl p-8 border-2 border-dashed border-primary/30 mb-6 animate-float">
+                        <span id="extraction-code" class="text-5xl font-bold gradient-text tracking-widest font-mono">12345</span>
+                    </div>
+                    <p class="text-gray-300 mb-2">提取码（有效期10分钟）</p>
+                    <p class="text-gray-500 text-sm mb-6">请将此提取码分享给接收方</p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button id="copy-code-btn" class="btn-primary">
+                            <i class="fa fa-copy mr-2"></i>复制提取码
+                        </button>
+                        <button id="share-code-btn" class="btn-secondary">
+                            <i class="fa fa-share-alt mr-2"></i>分享
+                        </button>
+                        <button id="new-upload-btn" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/30">
+                            <i class="fa fa-upload mr-2"></i>继续上传
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 使用统计 -->
+            <section class="card card-hover animate-fade-in">
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold mb-6">使用统计</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white/5 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold gradient-text mb-1" id="total-files">0</div>
+                            <div class="text-xs text-gray-400">总文件数</div>
+                        </div>
+                        <div class="bg-white/5 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold gradient-text mb-1" id="total-size">0 B</div>
+                            <div class="text-xs text-gray-400">总大小</div>
+                        </div>
+                        <div class="bg-white/5 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold gradient-text mb-1" id="transfer-count">0</div>
+                            <div class="text-xs text-gray-400">传输次数</div>
+                        </div>
+                        <div class="bg-white/5 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold gradient-text mb-1" id="success-rate">0%</div>
+                            <div class="text-xs text-gray-400">成功率</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="glass-dark border-t border-white/10 py-8">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div class="mb-4 md:mb-0">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                                <i class="fa fa-cloud text-white text-sm"></i>
+                            </div>
+                            <span class="font-semibold">文件传输助手</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">安全、高效、便捷的文件传输解决方案</p>
+                    </div>
+                    <div class="flex space-x-6">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fa fa-question-circle mr-1"></i>帮助
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fa fa-shield mr-1"></i>隐私
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fa fa-info-circle mr-1"></i>关于
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-white/10 text-center text-xs text-gray-500">
+                    © 2024 文件传输助手. 保留所有权利.
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 pointer-events-none"></div>
+
+    <script>
+        // 全局变量
+        let selectedFiles = [];
+        let cloudStorage = JSON.parse(localStorage.getItem('cloudStorage')) || {};
+        let isUploading = false;
+        let isPaused = false;
+        let uploadProgress = 0;
+        let uploadSpeed = 0;
+        let startTime = 0;
+        let uploadedBytes = 0;
+        let totalBytes = 0;
+        let uploadInterval = null;
+        let currentExtractionCode = '';
+        let expireTimer = null;
+
+        // DOM元素
+        const fileInput = document.getElementById('file-input');
+        const uploadArea = document.getElementById('upload-area');
+        const browseFilesBtn = document.getElementById('browse-files-btn');
+        const selectedFilesContainer = document.getElementById('selected-files');
+        const fileList = document.getElementById('file-list');
+        const clearFilesBtn = document.getElementById('clear-files-btn');
+        const sendFileBtn = document.getElementById('send-file-btn');
+        const uploadProgressContainer = document.getElementById('upload-progress');
+        const progressBar = document.getElementById('progress-bar');
+        const uploadPercentage = document.getElementById('upload-percentage');
+        const uploadStatus = document.getElementById('upload-status');
+        const uploadedSize = document.getElementById('uploaded-size');
+        const uploadSpeedElement = document.getElementById('upload-speed');
+        const pauseUploadBtn = document.getElementById('pause-upload-btn');
+        const cancelUploadBtn = document.getElementById('cancel-upload-btn');
+        const extractionCodeSection = document.getElementById('extraction-code-section');
+        const extractionCode = document.getElementById('extraction-code');
+        const copyCodeBtn = document.getElementById('copy-code-btn');
+        const shareCodeBtn = document.getElementById('share-code-btn');
+        const newUploadBtn = document.getElementById('new-upload-btn');
+        const inputExtractionCode = document.getElementById('input-extraction-code');
+        const receiveFileBtn = document.getElementById('receive-file-btn');
+        const receiveSection = document.getElementById('receive-section');
+        const filePreview = document.getElementById('file-preview');
+        const previewFileList = document.getElementById('preview-file-list');
+        const expireTime = document.getElementById('expire-time');
+        const senderInfo = document.getElementById('sender-info');
+        const downloadAllBtn = document.getElementById('download-all-btn');
+        const extractError = document.getElementById('extract-error');
+        const tryAgainBtn = document.getElementById('try-again-btn');
+        const backToBluetoothBtn = document.getElementById('back-to-bluetooth');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // 统计元素
+        const totalFilesElement = document.getElementById('total-files');
+        const totalSizeElement = document.getElementById('total-size');
+        const transferCountElement = document.getElementById('transfer-count');
+        const successRateElement = document.getElementById('success-rate');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            bindEvents();
+            loadCloudStorage();
+            updateStatistics();
+            cleanupExpiredFiles();
+        });
+
+        /**
+         * 绑定事件监听器
+         */
+        function bindEvents() {
+            // 文件选择事件
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // 浏览文件按钮
+            browseFilesBtn.addEventListener('click', () => fileInput.click());
+            
+            // 清空文件按钮
+            clearFilesBtn.addEventListener('click', clearSelectedFiles);
+            
+            // 拖拽文件事件
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // 发送文件按钮
+            sendFileBtn.addEventListener('click', startUpload);
+            
+            // 暂停/继续上传按钮
+            pauseUploadBtn.addEventListener('click', togglePauseUpload);
+            
+            // 取消上传按钮
+            cancelUploadBtn.addEventListener('click', cancelUpload);
+            
+            // 复制提取码按钮
+            copyCodeBtn.addEventListener('click', copyExtractionCode);
+            
+            // 分享按钮
+            shareCodeBtn.addEventListener('click', shareExtractionCode);
+            
+            // 继续上传按钮
+            newUploadBtn.addEventListener('click', resetUpload);
+            
+            // 接收文件按钮
+            receiveFileBtn.addEventListener('click', extractFiles);
+            
+            // 下载所有文件按钮
+            downloadAllBtn.addEventListener('click', downloadAllFiles);
+            
+            // 重试按钮
+            tryAgainBtn.addEventListener('click', resetExtract);
+            
+            // 返回蓝牙模式按钮
+            backToBluetoothBtn.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+            
+            // 主题切换按钮
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // 提取码输入事件
+            inputExtractionCode.addEventListener('input', validateExtractionCode);
+            inputExtractionCode.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    extractFiles();
+                }
+            });
+        }
+
+        /**
+         * 处理文件选择
+         */
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                selectedFiles = files;
+                updateFileList();
+                showSelectedFiles();
+            }
+        }
+
+        /**
+         * 处理拖拽经过
+         */
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadArea.classList.add('border-primary', 'bg-white/5');
+            uploadArea.classList.remove('border-white/20');
+        }
+
+        /**
+         * 处理拖拽离开
+         */
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadArea.classList.remove('border-primary', 'bg-white/5');
+            uploadArea.classList.add('border-white/20');
+        }
+
+        /**
+         * 处理拖拽放置
+         */
+        function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadArea.classList.remove('border-primary', 'bg-white/5');
+            uploadArea.classList.add('border-white/20');
+            
+            const files = Array.from(event.dataTransfer.files);
+            if (files.length > 0) {
+                selectedFiles = files;
+                updateFileList();
+                showSelectedFiles();
+            }
+        }
+
+        /**
+         * 更新文件列表显示
+         */
+        function updateFileList() {
+            fileList.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10';
+                
+                // 文件图标
+                const fileIcon = getFileIcon(file.type);
+                
+                // 文件信息
+                fileItem.innerHTML = `
+                    <div class="flex items-center flex-1 min-w-0">
+                        <span class="mr-3 text-lg text-primary">${fileIcon}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate" title="${file.name}">${file.name}</p>
+                            <p class="text-xs text-gray-400">${formatFileSize(file.size)}</p>
+                        </div>
+                    </div>
+                    <button class="text-gray-400 hover:text-danger transition-colors p-2 rounded-full hover:bg-white/10" onclick="removeFile(${index})">
+                        <i class="fa fa-times"></i>
+                    </button>
+                `;
+                
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        /**
+         * 获取文件图标
+         */
+        function getFileIcon(fileType) {
+            if (fileType.startsWith('image/')) {
+                return '<i class="fa fa-file-image-o"></i>';
+            } else if (fileType.startsWith('audio/')) {
+                return '<i class="fa fa-file-audio-o"></i>';
+            } else if (fileType.startsWith('video/')) {
+                return '<i class="fa fa-file-video-o"></i>';
+            } else if (fileType.includes('pdf')) {
+                return '<i class="fa fa-file-pdf-o"></i>';
+            } else if (fileType.includes('word') || fileType.includes('document')) {
+                return '<i class="fa fa-file-word-o"></i>';
+            } else if (fileType.includes('excel') || fileType.includes('sheet')) {
+                return '<i class="fa fa-file-excel-o"></i>';
+            } else if (fileType.includes('powerpoint') || fileType.includes('presentation')) {
+                return '<i class="fa fa-file-powerpoint-o"></i>';
+            } else if (fileType.includes('zip') || fileType.includes('compressed')) {
+                return '<i class="fa fa-file-archive-o"></i>';
+            } else if (fileType.startsWith('text/')) {
+                return '<i class="fa fa-file-text-o"></i>';
+            } else {
+                return '<i class="fa fa-file-o"></i>';
+            }
+        }
+
+        /**
+         * 移除文件
+         */
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            if (selectedFiles.length === 0) {
+                hideSelectedFiles();
+            } else {
+                updateFileList();
+            }
+        }
+
+        /**
+         * 显示已选择文件
+         */
+        function showSelectedFiles() {
+            selectedFilesContainer.classList.remove('hidden');
+            uploadArea.classList.add('hidden');
+        }
+
+        /**
+         * 隐藏已选择文件
+         */
+        function hideSelectedFiles() {
+            selectedFilesContainer.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+            selectedFiles = [];
+        }
+
+        /**
+         * 清空选中的文件
+         */
+        function clearSelectedFiles() {
+            hideSelectedFiles();
+        }
+
+        /**
+         * 开始上传
+         */
+        function startUpload() {
+            if (selectedFiles.length === 0) {
+                showToast('请先选择要上传的文件', 'warning');
+                return;
+            }
+            
+            isUploading = true;
+            isPaused = false;
+            uploadProgress = 0;
+            uploadedBytes = 0;
+            
+            // 计算总大小
+            totalBytes = selectedFiles.reduce((total, file) => total + file.size, 0);
+            
+            // 显示上传进度
+            showUploadProgress();
+            
+            // 记录开始时间
+            startTime = Date.now();
+            
+            // 开始进度更新
+            startUploadProgressUpdate();
+            
+            // 模拟上传过程
+            simulateUpload();
+        }
+
+        /**
+         * 显示上传进度
+         */
+        function showUploadProgress() {
+            uploadProgressContainer.classList.remove('hidden');
+            selectedFilesContainer.classList.add('hidden');
+            updateUploadProgressUI();
+        }
+
+        /**
+         * 开始上传进度更新
+         */
+        function startUploadProgressUpdate() {
+            if (uploadInterval) {
+                clearInterval(uploadInterval);
+            }
+            
+            uploadInterval = setInterval(() => {
+                if (isUploading && !isPaused) {
+                    // 计算上传速度
+                    const elapsedTime = (Date.now() - startTime) / 1000; // 秒
+                    if (elapsedTime > 0) {
+                        uploadSpeed = uploadedBytes / elapsedTime; // 字节/秒
+                    }
+                    
+                    updateUploadProgressUI();
+                }
+            }, 100);
+        }
+
+        /**
+         * 更新上传进度UI
+         */
+        function updateUploadProgressUI() {
+            uploadProgress = Math.min(Math.round((uploadedBytes / totalBytes) * 100), 100);
+            progressBar.style.width = `${uploadProgress}%`;
+            uploadPercentage.textContent = `${uploadProgress}%`;
+            uploadedSize.textContent = `${formatFileSize(uploadedBytes)} / ${formatFileSize(totalBytes)}`;
+            uploadSpeedElement.textContent = `${formatFileSize(uploadSpeed)}/s`;
+            
+            if (uploadProgress === 100) {
+                uploadStatus.textContent = '上传完成，正在生成提取码...';
+            } else if (isPaused) {
+                uploadStatus.textContent = '上传已暂停';
+            } else {
+                uploadStatus.textContent = '正在上传...';
+            }
+        }
+
+        /**
+         * 模拟上传过程
+         */
+        function simulateUpload() {
+            const uploadStep = () => {
+                if (!isUploading || isPaused) return;
+                
+                // 模拟上传速度
+                const chunkSize = Math.random() * 1024 * 1024 + 1024 * 100; // 100KB - 1.1MB
+                uploadedBytes = Math.min(uploadedBytes + chunkSize, totalBytes);
+                
+                if (uploadedBytes >= totalBytes) {
+                    // 上传完成
+                    completeUpload();
+                } else {
+                    // 继续上传
+                    setTimeout(uploadStep, 100);
+                }
+            };
+            
+            // 开始上传
+            uploadStep();
+        }
+
+        /**
+         * 完成上传
+         */
+        function completeUpload() {
+            isUploading = false;
+            
+            // 清除定时器
+            if (uploadInterval) {
+                clearInterval(uploadInterval);
+                uploadInterval = null;
+            }
+            
+            // 生成提取码
+            generateExtractionCode();
+            
+            // 更新统计
+            updateStatistics();
+            
+            // 保存到本地存储
+            saveCloudStorage();
+            
+            // 显示成功提示
+            showToast('文件上传成功！', 'success');
+        }
+
+        /**
+         * 生成提取码
+         */
+        function generateExtractionCode() {
+            // 生成5位随机数字
+            currentExtractionCode = Math.floor(10000 + Math.random() * 90000).toString();
+            
+            // 保存文件信息
+            const expiresAt = Date.now() + 10 * 60 * 1000; // 10分钟后过期
+            cloudStorage[currentExtractionCode] = {
+                files: selectedFiles.map(file => ({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    lastModified: file.lastModified
+                })),
+                expires: expiresAt,
+                createdAt: Date.now()
+            };
+            
+            // 显示提取码
+            extractionCode.textContent = currentExtractionCode;
+            showExtractionCode();
+        }
+
+        /**
+         * 显示提取码
+         */
+        function showExtractionCode() {
+            uploadProgressContainer.classList.add('hidden');
+            extractionCodeSection.classList.remove('hidden');
+            
+            // 开始倒计时
+            startExpireTimer();
+        }
+
+        /**
+         * 开始过期倒计时
+         */
+        function startExpireTimer() {
+            if (expireTimer) {
+                clearInterval(expireTimer);
+            }
+            
+            const updateExpireTime = () => {
+                const expiresAt = cloudStorage[currentExtractionCode]?.expires || 0;
+                const remainingTime = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+                
+                if (remainingTime <= 0) {
+                    // 已过期
+                    if (expireTimer) {
+                        clearInterval(expireTimer);
+                        expireTimer = null;
+                    }
+                    showToast('提取码已过期', 'warning');
+                    resetUpload();
+                }
+            };
+            
+            // 每秒更新一次
+            expireTimer = setInterval(updateExpireTime, 1000);
+            updateExpireTime();
+        }
+
+        /**
+         * 暂停/继续上传
+         */
+        function togglePauseUpload() {
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                pauseUploadBtn.innerHTML = '<i class="fa fa-play mr-2"></i>继续';
+                uploadStatus.textContent = '上传已暂停';
+            } else {
+                pauseUploadBtn.innerHTML = '<i class="fa fa-pause mr-2"></i>暂停';
+                uploadStatus.textContent = '正在上传...';
+                simulateUpload();
+            }
+        }
+
+        /**
+         * 取消上传
+         */
+        function cancelUpload() {
+            isUploading = false;
+            isPaused = false;
+            
+            // 清除定时器
+            if (uploadInterval) {
+                clearInterval(uploadInterval);
+                uploadInterval = null;
+            }
+            
+            // 重置UI
+            uploadProgressContainer.classList.add('hidden');
+            selectedFilesContainer.classList.remove('hidden');
+            
+            // 重置状态
+            uploadProgress = 0;
+            uploadedBytes = 0;
+            totalBytes = 0;
+            uploadSpeed = 0;
+            
+            showToast('上传已取消', 'info');
+        }
+
+        /**
+         * 重置上传
+         */
+        function resetUpload() {
+            // 清除定时器
+            if (expireTimer) {
+                clearInterval(expireTimer);
+                expireTimer = null;
+            }
+            
+            // 重置状态
+            selectedFiles = [];
+            currentExtractionCode = '';
+            
+            // 重置UI
+            extractionCodeSection.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+            selectedFilesContainer.classList.add('hidden');
+        }
+
+        /**
+         * 复制提取码
+         */
+        function copyExtractionCode() {
+            const code = extractionCode.textContent;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                    showToast('提取码已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopyCode(code);
+                });
+            } else {
+                fallbackCopyCode(code);
+            }
+        }
+
+        /**
+         * 降级复制方案
+         */
+        function fallbackCopyCode(code) {
+            const textArea = document.createElement('textarea');
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('提取码已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showToast('复制失败，请手动复制', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        /**
+         * 分享提取码
+         */
+        function shareExtractionCode() {
+            const code = extractionCode.textContent;
+            const shareText = `文件提取码: ${code}\n\n使用此提取码在10分钟内下载文件。\n\n来自文件传输助手`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: '文件提取码',
+                    text: shareText
+                }).catch(err => {
+                    console.log('分享失败:', err);
+                    copyExtractionCode();
+                });
+            } else {
+                copyExtractionCode();
+            }
+        }
+
+        /**
+         * 验证提取码
+         */
+        function validateExtractionCode(event) {
+            const value = event.target.value;
+            // 只允许数字
+            event.target.value = value.replace(/[^0-9]/g, '');
+        }
+
+        /**
+         * 提取文件
+         */
+        function extractFiles() {
+            const code = inputExtractionCode.value.trim();
+            
+            if (code.length !== 5) {
+                showToast('请输入5位数字提取码', 'warning');
+                return;
+            }
+            
+            const fileData = cloudStorage[code];
+            
+            if (!fileData) {
+                showExtractError();
+                return;
+            }
+            
+            // 检查是否过期
+            if (Date.now() > fileData.expires) {
+                showExtractError('提取码已过期');
+                return;
+            }
+            
+            // 显示文件预览
+            showFilePreview(code, fileData);
+        }
+
+        /**
+         * 显示文件预览
+         */
+        function showFilePreview(code, fileData) {
+            receiveSection.classList.add('hidden');
+            filePreview.classList.remove('hidden');
+            
+            // 更新文件列表
+            previewFileList.innerHTML = '';
+            
+            fileData.files.forEach((fileInfo, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10';
+                
+                // 文件图标
+                const fileIcon = getFileIcon(fileInfo.type);
+                
+                // 文件信息
+                fileItem.innerHTML = `
+                    <div class="flex items-center flex-1 min-w-0">
+                        <span class="mr-3 text-lg text-primary">${fileIcon}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate" title="${fileInfo.name}">${fileInfo.name}</p>
+                            <p class="text-xs text-gray-400">${formatFileSize(fileInfo.size)}</p>
+                        </div>
+                    </div>
+                    <button class="text-primary hover:text-primary/80 transition-colors p-2 rounded-full hover:bg-white/10" onclick="downloadFile('${code}', ${index})">
+                        <i class="fa fa-download"></i>
+                    </button>
+                `;
+                
+                previewFileList.appendChild(fileItem);
+            });
+            
+            // 更新过期时间
+            updateExpireTimeDisplay(fileData.expires);
+            
+            // 更新发送者信息
+            senderInfo.textContent = '匿名用户';
+            
+            // 开始倒计时
+            startPreviewExpireTimer(code, fileData.expires);
+        }
+
+        /**
+         * 更新过期时间显示
+         */
+        function updateExpireTimeDisplay(expiresAt) {
+            const remainingTime = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            expireTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        /**
+         * 开始预览过期倒计时
+         */
+        function startPreviewExpireTimer(code, expiresAt) {
+            if (expireTimer) {
+                clearInterval(expireTimer);
+            }
+            
+            const updateTimer = () => {
+                updateExpireTimeDisplay(expiresAt);
+                
+                if (Date.now() > expiresAt) {
+                    // 已过期
+                    if (expireTimer) {
+                        clearInterval(expireTimer);
+                        expireTimer = null;
+                    }
+                    showToast('提取码已过期', 'warning');
+                    resetExtract();
+                }
+            };
+            
+            // 每秒更新一次
+            expireTimer = setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+
+        /**
+         * 下载单个文件
+         */
+        function downloadFile(code, index) {
+            const fileData = cloudStorage[code];
+            if (!fileData || !fileData.files[index]) {
+                showToast('文件不存在或已过期', 'error');
+                return;
+            }
+            
+            const fileInfo = fileData.files[index];
+            
+            // 模拟下载
+            showToast(`开始下载: ${fileInfo.name}`, 'info');
+            
+            // 由于这是演示，我们创建一个模拟的下载链接
+            setTimeout(() => {
+                showToast(`文件 ${fileInfo.name} 下载完成`, 'success');
+            }, 2000);
+        }
+
+        /**
+         * 下载所有文件
+         */
+        function downloadAllFiles() {
+            const code = inputExtractionCode.value.trim();
+            const fileData = cloudStorage[code];
+            
+            if (!fileData) {
+                showToast('文件不存在或已过期', 'error');
+                return;
+            }
+            
+            showToast(`开始下载 ${fileData.files.length} 个文件`, 'info');
+            
+            // 模拟批量下载
+            setTimeout(() => {
+                showToast('所有文件下载完成', 'success');
+            }, 3000);
+        }
+
+        /**
+         * 显示提取错误
+         */
+        function showExtractError(message = '提取码无效或已过期') {
+            receiveSection.classList.add('hidden');
+            extractError.classList.remove('hidden');
+        }
+
+        /**
+         * 重置提取
+         */
+        function resetExtract() {
+            // 清除定时器
+            if (expireTimer) {
+                clearInterval(expireTimer);
+                expireTimer = null;
+            }
+            
+            // 重置UI
+            receiveSection.classList.remove('hidden');
+            filePreview.classList.add('hidden');
+            extractError.classList.add('hidden');
+            inputExtractionCode.value = '';
+        }
+
+        /**
+         * 切换主题
+         */
+        function toggleTheme() {
+            const icon = themeToggle.querySelector('i');
+            if (icon.classList.contains('fa-moon-o')) {
+                icon.classList.remove('fa-moon-o');
+                icon.classList.add('fa-sun-o');
+                // 这里可以添加浅色主题切换逻辑
+                showToast('浅色主题正在开发中...', 'info');
+            } else {
+                icon.classList.remove('fa-sun-o');
+                icon.classList.add('fa-moon-o');
+                // 这里可以添加深色主题切换逻辑
+                showToast('已切换到深色主题', 'success');
+            }
+        }
+
+        /**
+         * 显示Toast提示
+         */
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            
+            // 创建Toast元素
+            const toast = document.createElement('div');
+            toast.className = `mb-4 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;
+            
+            // 设置样式
+            switch (type) {
+                case 'success':
+                    toast.classList.add('bg-green-500', 'text-white');
+                    break;
+                case 'error':
+                    toast.classList.add('bg-red-500', 'text-white');
+                    break;
+                case 'warning':
+                    toast.classList.add('bg-amber-500', 'text-white');
+                    break;
+                default:
+                    toast.classList.add('bg-blue-500', 'text-white');
+            }
+            
+            // 设置内容
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fa fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            // 添加到容器
+            toastContainer.appendChild(toast);
+            
+            // 显示动画
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 100);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        /**
+         * 格式化文件大小
+         */
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        /**
+         * 加载云端存储
+         */
+        function loadCloudStorage() {
+            const stored = localStorage.getItem('cloudStorage');
+            if (stored) {
+                cloudStorage = JSON.parse(stored);
+            }
+        }
+
+        /**
+         * 保存云端存储
+         */
+        function saveCloudStorage() {
+            localStorage.setItem('cloudStorage', JSON.stringify(cloudStorage));
+        }
+
+        /**
+         * 清理过期文件
+         */
+        function cleanupExpiredFiles() {
+            const now = Date.now();
+            let cleaned = false;
+            
+            Object.keys(cloudStorage).forEach(code => {
+                if (cloudStorage[code].expires < now) {
+                    delete cloudStorage[code];
+                    cleaned = true;
+                }
+            });
+            
+            if (cleaned) {
+                saveCloudStorage();
+                updateStatistics();
+            }
+        }
+
+        /**
+         * 更新统计信息
+         */
+        function updateStatistics() {
+            const stats = calculateStatistics();
+            
+            totalFilesElement.textContent = stats.totalFiles;
+            totalSizeElement.textContent = formatFileSize(stats.totalSize);
+            transferCountElement.textContent = stats.transferCount;
+            successRateElement.textContent = stats.successRate + '%';
+        }
+
+        /**
+         * 计算统计信息
+         */
+        function calculateStatistics() {
+            let totalFiles = 0;
+            let totalSize = 0;
+            let transferCount = Object.keys(cloudStorage).length;
+            
+            Object.values(cloudStorage).forEach(data => {
+                totalFiles += data.files.length;
+                data.files.forEach(file => {
+                    totalSize += file.size;
+                });
+            });
+            
+            // 从本地存储获取历史统计
+            const history = JSON.parse(localStorage.getItem('transferHistory') || '{}');
+            const totalTransfers = history.total || 0;
+            const successfulTransfers = history.successful || 0;
+            const successRate = totalTransfers > 0 ? Math.round((successfulTransfers / totalTransfers) * 100) : 100;
+            
+            return {
+                totalFiles,
+                totalSize,
+                transferCount,
+                successRate
+            };
+        }
+    </script>
+</body>
+</html>
